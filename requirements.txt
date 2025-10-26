@@ -1,0 +1,18 @@
+# Scrapy Framework (versão compatível com Python 3.9)
+scrapy==2.8.0
+
+# Selenium para automação de navegador
+selenium>=4.15.0
+
+# WebDriver Manager para gerenciar drivers automaticamente
+webdriver-manager>=4.0.1
+
+# Integração Scrapy + Selenium
+scrapy-selenium>=0.0.7
+
+# Dependências de criptografia (versões compatíveis com Python 3.9)
+cryptography==41.0.7
+pyOpenSSL==23.3.0
+
+# Dependências adicionais
+itemadapter>=0.8.0

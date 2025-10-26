@@ -1,0 +1,53 @@
+# Ambiente Virtual Python
+.venv/
+venv/
+env/
+ENV/
+
+# Arquivos Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Banco de dados SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Cookies salvos
+*.pkl
+facebook_cookies.pkl
+
+# Logs e debug
+*.log
+marketplace_debug.html
+
+# Arquivos do Scrapy
+.scrapy/
+*.json
+*.xml
+*.csv
+
+# ChromeDriver
+chromedriver.exe
+chromedriver
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Configurações locais
+local_settings.py
+.env
+
+# Cache HTTP do Scrapy
+httpcache/
