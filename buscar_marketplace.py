@@ -41,7 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def buscar_anuncios(palavra_chave, email=None, senha=None, cidade='curitiba', usar_cookies_salvos=True):
+def buscar_anuncios(palavra_chave, email=None, senha=None, cidade='curitiba', raio_km=70, usar_cookies_salvos=True):
     """
     Busca anúncios no Facebook Marketplace
     
@@ -50,13 +50,14 @@ def buscar_anuncios(palavra_chave, email=None, senha=None, cidade='curitiba', us
         email (str, optional): Email para login no Facebook
         senha (str, optional): Senha para login no Facebook
         cidade (str, optional): Cidade para filtrar os resultados (padrão: "curitiba")
+        raio_km (int, optional): Raio de busca em quilômetros (padrão: 70km)
         usar_cookies_salvos (bool, optional): Se True, tenta usar cookies salvos antes de fazer login
     
     Returns:
         bool: True se a busca foi executada com sucesso
         
     Exemplo:
-        >>> buscar_anuncios("honda civic", email="seu@email.com", senha="senha123")
+        >>> buscar_anuncios("honda civic", email="seu@email.com", senha="senha123", raio_km=70)
         True
     """
     try:
@@ -110,7 +111,8 @@ def buscar_anuncios(palavra_chave, email=None, senha=None, cidade='curitiba', us
             yield runner.crawl(
                 FacebookMarketplaceSpider,
                 palavra_chave=palavra_chave,
-                cidade=cidade
+                cidade=cidade,
+                raio_km=raio_km
             )
             reactor.stop()
         
@@ -133,18 +135,19 @@ def buscar_anuncios(palavra_chave, email=None, senha=None, cidade='curitiba', us
         return False
 
 
-def buscar_sem_login(palavra_chave, cidade='curitiba'):
+def buscar_sem_login(palavra_chave, cidade='curitiba', raio_km=70):
     """
     Busca anúncios sem fazer login (modo simplificado)
     
     Args:
         palavra_chave (str): Palavra-chave para buscar
         cidade (str, optional): Cidade para filtrar os resultados (padrão: "curitiba")
+        raio_km (int, optional): Raio de busca em quilômetros (padrão: 70km)
     
     Returns:
         bool: True se a busca foi executada com sucesso
     """
-    return buscar_anuncios(palavra_chave=palavra_chave, cidade=cidade)
+    return buscar_anuncios(palavra_chave=palavra_chave, cidade=cidade, raio_km=raio_km)
 
 
 if __name__ == '__main__':
@@ -203,6 +206,13 @@ Exemplos de uso:
         default='curitiba',
         help='Cidade para filtrar os resultados (padrão: curitiba)'
     )
+
+    parser.add_argument(
+        '--raio',
+        type=int,
+        default=70,
+        help='Raio de busca em quilômetros (padrão: 70km)'
+    )
     
     parser.add_argument(
         '--no-cookies',
@@ -227,6 +237,7 @@ Exemplos de uso:
         email=args.email,
         senha=args.senha,
         cidade=args.cidade,
+        raio_km=args.raio,
         usar_cookies_salvos=not args.no_cookies
     )
     
