@@ -68,10 +68,14 @@ class SQLitePipeline:
         try:
             adapter = ItemAdapter(item)
             
+            # Definir origem como 'facebook' se não estiver definido
+            origem = adapter.get('origem', 'facebook')
+            
             self.cursor.execute('''
                 INSERT OR IGNORE INTO anuncios 
-                (titulo, descricao, preco, localizacao, url, imagem_url, vendedor, palavra_chave, data_coleta)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (titulo, descricao, preco, localizacao, url, imagem_url, vendedor, palavra_chave, 
+                 data_coleta, origem, categoria, data_publicacao, enviado_telegram)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 adapter.get('titulo'),
                 adapter.get('descricao'),
@@ -81,15 +85,19 @@ class SQLitePipeline:
                 adapter.get('imagem_url'),
                 adapter.get('vendedor'),
                 adapter.get('palavra_chave'),
-                adapter.get('data_coleta')
+                adapter.get('data_coleta'),
+                origem,
+                adapter.get('categoria'),
+                adapter.get('data_publicacao'),
+                adapter.get('enviado_telegram', 0)
             ))
             
             self.conn.commit()
             
             if self.cursor.rowcount > 0:
-                self.logger.info(f"Anúncio salvo: {adapter.get('titulo')}")
+                self.logger.info(f"[{origem.upper()}] Anúncio salvo: {adapter.get('titulo')}")
             else:
-                self.logger.debug(f"Anúncio já existe no banco: {adapter.get('url')}")
+                self.logger.debug(f"[{origem.upper()}] Anúncio já existe no banco: {adapter.get('url')}")
             
             return item
             

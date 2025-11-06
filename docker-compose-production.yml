@@ -1,0 +1,102 @@
+services:
+  scraper-marketplace:
+    image: dalexandrias/src-scrapy-marketplace-v1:latest
+      # context: .
+      # dockerfile: Dockerfile
+    
+    container_name: scraper-marketplace
+    
+    # Reiniciar automaticamente em caso de falha
+    restart: unless-stopped
+    
+    # Variáveis de ambiente (IMPORTANTE: Copie .env.example para .env e configure)
+    env_file:
+      - .env
+    
+    # Variáveis de ambiente obrigatórias (sobrescreve .env se necessário)
+    environment:
+      # Telegram Configuration
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_ENABLED=${TELEGRAM_ENABLED}
+      - TELEGRAM_DELAY=${TELEGRAM_DELAY}
+      
+      # Database Configuration
+      - DATABASE_PATH=${DATABASE_PATH}
+      
+      # Scheduler Configuration
+      - SCHEDULER_INTERVAL=${SCHEDULER_INTERVAL}
+      - SCHEDULER_ENABLED=${SCHEDULER_ENABLED}
+      - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE}
+      - SCHEDULER_MAX_WORKERS=${SCHEDULER_MAX_WORKERS}
+      
+      # OLX Settings
+      - OLX_USER_AGENT=${OLX_USER_AGENT}
+      - OLX_REQUEST_DELAY=${OLX_REQUEST_DELAY}
+      - OLX_ESTADOS=${OLX_ESTADOS}
+      - OLX_ESTADO_PADRAO=${OLX_ESTADO_PADRAO}
+      - OLX_CATEGORIA_PADRAO=${OLX_CATEGORIA_PADRAO}
+      
+      # Facebook Marketplace Settings
+      - FACEBOOK_EMAIL=${FACEBOOK_EMAIL}
+      - FACEBOOK_PASSWORD=${FACEBOOK_PASSWORD}
+      - FACEBOOK_USE_COOKIES=${FACEBOOK_USE_COOKIES}
+      - FACEBOOK_CIDADE_PADRAO=${FACEBOOK_CIDADE_PADRAO}
+      
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_DIR=${LOG_DIR}
+      - LOG_FILE_PREFIX=${LOG_FILE_PREFIX}
+      - LOG_ROTATION=${LOG_ROTATION}
+      - LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS}
+      - LOG_COMPRESSION=${LOG_COMPRESSION}
+      - LOG_FILE_FORMAT=${LOG_FILE_FORMAT}
+      
+      # General Settings
+      - AUTO_RUN=${AUTO_RUN}
+      - AUTO_RUN_INTERVAL=${AUTO_RUN_INTERVAL}
+      
+      # Timezone
+      - TZ=${SCHEDULER_TIMEZONE}
+    
+    # Volumes para persistência de dados
+    volumes:
+      # Banco de dados SQLite
+      - ./data:/app/data
+      
+      # Logs da aplicação
+      - ./logs:/app/logs
+      
+      # Backups do banco
+      - ./backups:/app/backups
+    
+    # Configurações de recursos (limites)
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: 2.0
+    
+    # Health check para monitoramento
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sqlite3; conn = sqlite3.connect('/app/data/marketplace_anuncios.db'); conn.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network mode (usar host se precisar acessar rede local)
+    # network_mode: "bridge"
+    
+    # Compartilhar namespace de IPC (necessário para Chromium/Playwright)
+    shm_size: '2gb'
+
+# Networks (opcional - configurar se precisar de rede customizada)
+# networks:
+#   default:
+#     name: scraper-network

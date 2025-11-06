@@ -226,8 +226,18 @@ class FacebookMarketplaceSpider(scrapy.Spider):
             except:
                 item['preco'] = 'N/A'
             
+            # Validar se preço é válido
+            if not item['preco'] or item['preco'] in ['N/A', '', '0', 'R$ 0']:
+                self.logger.debug(f"Anúncio '{item['titulo'][:40]}...' sem preço válido, ignorando")
+                return None
+            
             # Localização
             item['localizacao'] = self.cidade
+            
+            # Validar se localização é válida
+            if not item['localizacao'] or item['localizacao'] in ['N/A', '', 'não informado']:
+                self.logger.debug(f"Anúncio '{item['titulo'][:40]}...' sem localização válida, ignorando")
+                return None
             
             # URL da imagem
             try:
@@ -243,6 +253,8 @@ class FacebookMarketplaceSpider(scrapy.Spider):
             # Metadados
             item['data_coleta'] = datetime.now().isoformat()
             item['palavra_chave'] = self.palavra_chave
+            item['origem'] = 'facebook'
+            item['enviado_telegram'] = 0
             
             self.logger.debug(f"Anúncio extraído: {item['titulo']} - {item['preco']}")
             
@@ -323,6 +335,8 @@ class FacebookMarketplaceSpider(scrapy.Spider):
             # Metadados
             item['data_coleta'] = datetime.now().isoformat()
             item['palavra_chave'] = self.palavra_chave
+            item['origem'] = 'facebook'
+            item['enviado_telegram'] = 0
             
             self.logger.debug(f"Anúncio extraído: {item['titulo']} - {item['preco']}")
             

@@ -22,7 +22,13 @@ facebook_cookies.pkl
 
 # Logs e debug
 *.log
+*.log.*
+*.log.zip
+*.log.gz
+*.log.tar.gz
 marketplace_debug.html
+logs/
+!logs/.gitkeep
 
 # Arquivos do Scrapy
 .scrapy/
@@ -51,3 +57,15 @@ local_settings.py
 
 # Cache HTTP do Scrapy
 httpcache/
+
+# Logs específicos
+marketplace.log
+ads_log.log
+*.log.*
+*.log
+
+# Arquivos de tracking de envio
+sent_ads.json
+
+# Backups do banco de dados
+*_backup_*.db

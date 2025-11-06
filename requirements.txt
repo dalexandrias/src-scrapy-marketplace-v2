@@ -1,7 +1,13 @@
+# ==============================================
+# SCRAPY FRAMEWORK
+# ==============================================
 # Scrapy Framework (versão compatível com Python 3.9)
 scrapy==2.8.0
 
-# Selenium para automação de navegador
+# Playwright para automação de navegador (melhor que Selenium)
+playwright>=1.40.0
+
+# Selenium para automação de navegador (fallback)
 selenium>=4.15.0
 
 # WebDriver Manager para gerenciar drivers automaticamente
@@ -14,5 +20,53 @@ scrapy-selenium>=0.0.7
 cryptography==41.0.7
 pyOpenSSL==23.3.0
 
-# Dependências adicionais
+# Dependências adicionais do Scrapy
 itemadapter>=0.8.0
+
+
+# ==============================================
+# TELEGRAM BOT
+# ==============================================
+# Python Telegram Bot para envio de notificações e comandos interativos
+# [job-queue] inclui suporte para agendamento de tarefas
+python-telegram-bot[job-queue]>=20.0
+
+# Nest asyncio para permitir loops aninhados (threads + asyncio)
+nest-asyncio>=1.5.0
+
+
+# ==============================================
+# LOGGING E CONFIGURAÇÃO
+# ==============================================
+# Loguru para logging estruturado e colorido
+loguru>=0.7.0
+
+# Python-decouple para gerenciar variáveis de ambiente
+python-decouple>=3.8
+
+
+# ==============================================
+# DATA PROCESSING
+# ==============================================
+# Pandas para processar JSON da OLX
+pandas>=2.0.0
+
+# Requests para requisições HTTP simples
+requests>=2.31.0
+
+
+# ==============================================
+# UTILITIES
+# ==============================================
+# python-dateutil para parsing de datas
+python-dateutil>=2.8.2
+
+# pytz para trabalhar com timezones
+pytz>=2023.3
+
+
+# ==============================================
+# SCHEDULER & AUTOMATION
+# ==============================================
+# APScheduler para agendamento de tarefas
+APScheduler>=3.10.0

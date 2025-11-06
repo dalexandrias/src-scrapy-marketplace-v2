@@ -18,3 +18,11 @@ class MarketplaceAnuncioItem(scrapy.Item):
     vendedor = scrapy.Field()
     data_coleta = scrapy.Field()
     palavra_chave = scrapy.Field()
+    
+    # Novos campos para suporte a múltiplas origens e notificações
+    origem = scrapy.Field()  # facebook, olx, etc
+    categoria = scrapy.Field()  # categoria do anúncio
+    data_publicacao = scrapy.Field()  # data de publicação do anúncio
+    enviado_telegram = scrapy.Field()  # flag se foi enviado para Telegram
+    data_envio_telegram = scrapy.Field()  # data/hora do envio
+

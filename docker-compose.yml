@@ -1,0 +1,102 @@
+services:
+  scraper-marketplace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    container_name: scraper-marketplace
+    
+    # Reiniciar automaticamente em caso de falha
+    restart: unless-stopped
+    
+    # Variáveis de ambiente (IMPORTANTE: Copie .env.example para .env e configure)
+    env_file:
+      - .env
+    
+    # Variáveis de ambiente obrigatórias (sobrescreve .env se necessário)
+    environment:
+      # Telegram
+      - TELEGRAM_BOT_TOKEN=8482667305:AAF5AIvWtSMffOlCJhjcoB9jgGoQ3X9YC4M
+      - TELEGRAM_CHAT_ID=1275893490
+      - TELEGRAM_ENABLED=true
+      - TELEGRAM_DELAY=1.0
+      
+      # Database
+      - DATABASE_PATH=data/marketplace_anuncios.db
+      
+      # Scheduler
+      - SCHEDULER_INTERVAL=30
+      - SCHEDULER_ENABLED=false
+      - SCHEDULER_TIMEZONE=America/Sao_Paulo
+      - SCHEDULER_MAX_WORKERS=10
+      
+      # OLX
+      - OLX_USER_AGENT=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36
+      - OLX_REQUEST_DELAY=2
+      - OLX_ESTADOS=PR,SP,RJ,MG
+      - OLX_ESTADO_PADRAO=PR
+      - OLX_CATEGORIA_PADRAO=motos
+      
+      # Facebook
+      - FACEBOOK_EMAIL=
+      - FACEBOOK_PASSWORD=
+      - FACEBOOK_USE_COOKIES=true
+      - FACEBOOK_CIDADE_PADRAO=curitiba
+      
+      # Logging
+      - LOG_LEVEL=INFO
+      - LOG_DIR=logs
+      - LOG_FILE_PREFIX=marketplace
+      - LOG_ROTATION=00:00
+      - LOG_RETENTION_DAYS=2
+      - LOG_COMPRESSION=zip
+      - LOG_FILE_FORMAT={prefix}_{time:YYYY-MM-DD}.log
+      
+      # General
+      - AUTO_RUN=false
+      - AUTO_RUN_INTERVAL=30
+      
+      # Timezone
+      - TZ=America/Sao_Paulo
+    
+    # Volumes para persistência de dados
+    volumes:
+      # Banco de dados SQLite
+      - ./data:/app/data
+      
+      # Logs da aplicação
+      - ./logs:/app/logs
+      
+      # Backups do banco
+      - ./backups:/app/backups
+    
+    # Configurações de recursos (limites)
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: 2.0
+    
+    # Health check para monitoramento
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sqlite3; conn = sqlite3.connect('/app/data/marketplace_anuncios.db'); conn.close()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network mode (usar host se precisar acessar rede local)
+    # network_mode: "bridge"
+    
+    # Compartilhar namespace de IPC (necessário para Chromium/Playwright)
+    shm_size: '2gb'
+
+# Networks (opcional - configurar se precisar de rede customizada)
+networks:
+  default:
+    name: scraper-network
