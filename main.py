@@ -28,6 +28,176 @@ class ScraperApplication:
         self.scheduler = None
         self.running = False
     
+    def _run_migrations(self) -> bool:
+        """
+        Executa migrações necessárias no banco de dados existente
+        
+        Returns:
+            True se migrações foram aplicadas com sucesso
+        """
+        import sqlite3
+        
+        db_path = Config.database.get_connection_string()
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Função auxiliar para verificar se coluna existe
+            def column_exists(table: str, column: str) -> bool:
+                cursor.execute(f"PRAGMA table_info({table})")
+                columns = [row[1] for row in cursor.fetchall()]
+                return column in columns
+            
+            # Função auxiliar para verificar se tabela existe
+            def table_exists(table: str) -> bool:
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
+                return cursor.fetchone() is not None
+            
+            changes_made = False
+            
+            # 1. Verificar/adicionar colunas na tabela anuncios
+            if table_exists('anuncios'):
+                if not column_exists('anuncios', 'origem'):
+                    logger.info("Adicionando coluna 'origem' à tabela anuncios...")
+                    cursor.execute("ALTER TABLE anuncios ADD COLUMN origem TEXT DEFAULT 'facebook'")
+                    changes_made = True
+                
+                if not column_exists('anuncios', 'categoria'):
+                    logger.info("Adicionando coluna 'categoria' à tabela anuncios...")
+                    cursor.execute("ALTER TABLE anuncios ADD COLUMN categoria TEXT")
+                    changes_made = True
+                
+                if not column_exists('anuncios', 'data_publicacao'):
+                    logger.info("Adicionando coluna 'data_publicacao' à tabela anuncios...")
+                    cursor.execute("ALTER TABLE anuncios ADD COLUMN data_publicacao TEXT")
+                    changes_made = True
+                
+                if not column_exists('anuncios', 'enviado_telegram'):
+                    logger.info("Adicionando coluna 'enviado_telegram' à tabela anuncios...")
+                    cursor.execute("ALTER TABLE anuncios ADD COLUMN enviado_telegram INTEGER DEFAULT 0")
+                    changes_made = True
+                
+                if not column_exists('anuncios', 'data_envio_telegram'):
+                    logger.info("Adicionando coluna 'data_envio_telegram' à tabela anuncios...")
+                    cursor.execute("ALTER TABLE anuncios ADD COLUMN data_envio_telegram TEXT")
+                    changes_made = True
+                
+                if not column_exists('anuncios', 'ultima_visualizacao'):
+                    logger.info("Adicionando coluna 'ultima_visualizacao' à tabela anuncios...")
+                    cursor.execute("ALTER TABLE anuncios ADD COLUMN ultima_visualizacao TIMESTAMP")
+                    changes_made = True
+            
+            # 2. Criar tabela credentials se não existir
+            if not table_exists('credentials'):
+                logger.info("Criando tabela 'credentials'...")
+                cursor.execute('''
+                    CREATE TABLE credentials (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        service TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        encrypted_password TEXT NOT NULL,
+                        encryption_key TEXT NOT NULL,
+                        is_active INTEGER DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(service, username)
+                    )
+                ''')
+                changes_made = True
+            
+            # 3. Criar tabela palavras_chave se não existir
+            if not table_exists('palavras_chave'):
+                logger.info("Criando tabela 'palavras_chave'...")
+                cursor.execute('''
+                    CREATE TABLE palavras_chave (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        palavra TEXT NOT NULL,
+                        origem TEXT NOT NULL CHECK(origem IN ('facebook', 'olx', 'ambos')),
+                        prioridade INTEGER DEFAULT 1,
+                        ativo INTEGER DEFAULT 1,
+                        total_encontrados INTEGER DEFAULT 0,
+                        ultima_busca TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(palavra, origem)
+                    )
+                ''')
+                changes_made = True
+            
+            # 4. Criar tabela scheduler_config se não existir
+            if not table_exists('scheduler_config'):
+                logger.info("Criando tabela 'scheduler_config'...")
+                cursor.execute('''
+                    CREATE TABLE scheduler_config (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        interval_minutes INTEGER NOT NULL DEFAULT 30,
+                        enabled INTEGER DEFAULT 1,
+                        last_run TIMESTAMP,
+                        next_run TIMESTAMP,
+                        total_runs INTEGER DEFAULT 0,
+                        total_errors INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                cursor.execute("INSERT INTO scheduler_config (interval_minutes, enabled) VALUES (30, 0)")
+                changes_made = True
+            
+            # 5. Criar tabela execution_logs se não existir
+            if not table_exists('execution_logs'):
+                logger.info("Criando tabela 'execution_logs'...")
+                cursor.execute('''
+                    CREATE TABLE execution_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tipo TEXT NOT NULL CHECK(tipo IN ('facebook', 'olx', 'manual', 'scheduled')),
+                        palavra_chave TEXT,
+                        status TEXT NOT NULL CHECK(status IN ('success', 'error', 'running')),
+                        total_encontrados INTEGER DEFAULT 0,
+                        total_novos INTEGER DEFAULT 0,
+                        mensagem TEXT,
+                        duracao_segundos REAL,
+                        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        finished_at TIMESTAMP
+                    )
+                ''')
+                changes_made = True
+            
+            # 6. Criar índices se não existirem
+            indices = [
+                "CREATE INDEX IF NOT EXISTS idx_url ON anuncios(url)",
+                "CREATE INDEX IF NOT EXISTS idx_palavra_chave ON anuncios(palavra_chave)",
+                "CREATE INDEX IF NOT EXISTS idx_origem ON anuncios(origem)",
+                "CREATE INDEX IF NOT EXISTS idx_enviado_telegram ON anuncios(enviado_telegram)",
+                "CREATE INDEX IF NOT EXISTS idx_data_publicacao ON anuncios(data_publicacao)",
+                "CREATE INDEX IF NOT EXISTS idx_ultima_visualizacao ON anuncios(ultima_visualizacao)",
+                "CREATE INDEX IF NOT EXISTS idx_credentials_service ON credentials(service)",
+                "CREATE INDEX IF NOT EXISTS idx_credentials_active ON credentials(is_active)",
+                "CREATE INDEX IF NOT EXISTS idx_palavras_ativo ON palavras_chave(ativo)",
+                "CREATE INDEX IF NOT EXISTS idx_palavras_origem ON palavras_chave(origem)",
+                "CREATE INDEX IF NOT EXISTS idx_palavras_prioridade ON palavras_chave(prioridade DESC)",
+                "CREATE INDEX IF NOT EXISTS idx_logs_tipo ON execution_logs(tipo)",
+                "CREATE INDEX IF NOT EXISTS idx_logs_status ON execution_logs(status)",
+                "CREATE INDEX IF NOT EXISTS idx_logs_started_at ON execution_logs(started_at DESC)",
+            ]
+            
+            for index_sql in indices:
+                cursor.execute(index_sql)
+            
+            conn.commit()
+            conn.close()
+            
+            if changes_made:
+                logger.success("✅ Migrações aplicadas com sucesso")
+            else:
+                logger.debug("✓ Banco de dados já está atualizado")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao executar migrações: {e}")
+            return False
+    
     def _initialize_database(self) -> bool:
         """
         Inicializa o banco de dados se não existir
@@ -46,6 +216,8 @@ class ScraperApplication:
         # Verificar se banco já existe
         if db_file.exists():
             logger.debug(f"Banco de dados já existe: {db_path}")
+            # Executar migrações para garantir que todas as tabelas/colunas existem
+            self._run_migrations()
             return True
         
         logger.info(f"🔧 Criando banco de dados: {db_path}")
