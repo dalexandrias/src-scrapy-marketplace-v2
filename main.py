@@ -163,28 +163,40 @@ class ScraperApplication:
                 ''')
                 changes_made = True
             
-            # 6. Criar índices se não existirem
-            indices = [
-                "CREATE INDEX IF NOT EXISTS idx_url ON anuncios(url)",
-                "CREATE INDEX IF NOT EXISTS idx_palavra_chave ON anuncios(palavra_chave)",
-                "CREATE INDEX IF NOT EXISTS idx_origem ON anuncios(origem)",
-                "CREATE INDEX IF NOT EXISTS idx_enviado_telegram ON anuncios(enviado_telegram)",
-                "CREATE INDEX IF NOT EXISTS idx_data_publicacao ON anuncios(data_publicacao)",
-                "CREATE INDEX IF NOT EXISTS idx_ultima_visualizacao ON anuncios(ultima_visualizacao)",
-                "CREATE INDEX IF NOT EXISTS idx_credentials_service ON credentials(service)",
-                "CREATE INDEX IF NOT EXISTS idx_credentials_active ON credentials(is_active)",
-                "CREATE INDEX IF NOT EXISTS idx_palavras_ativo ON palavras_chave(ativo)",
-                "CREATE INDEX IF NOT EXISTS idx_palavras_origem ON palavras_chave(origem)",
-                "CREATE INDEX IF NOT EXISTS idx_palavras_prioridade ON palavras_chave(prioridade DESC)",
-                "CREATE INDEX IF NOT EXISTS idx_logs_tipo ON execution_logs(tipo)",
-                "CREATE INDEX IF NOT EXISTS idx_logs_status ON execution_logs(status)",
-                "CREATE INDEX IF NOT EXISTS idx_logs_started_at ON execution_logs(started_at DESC)",
-            ]
-            
-            for index_sql in indices:
-                cursor.execute(index_sql)
-            
+            # COMMIT DAS TABELAS E COLUNAS ANTES DE CRIAR ÍNDICES
             conn.commit()
+            
+            # 6. Criar índices se não existirem (APÓS commit das tabelas)
+            try:
+                indices = [
+                    ("anuncios", "idx_url", "CREATE INDEX IF NOT EXISTS idx_url ON anuncios(url)"),
+                    ("anuncios", "idx_palavra_chave", "CREATE INDEX IF NOT EXISTS idx_palavra_chave ON anuncios(palavra_chave)"),
+                    ("anuncios", "idx_origem", "CREATE INDEX IF NOT EXISTS idx_origem ON anuncios(origem)"),
+                    ("anuncios", "idx_enviado_telegram", "CREATE INDEX IF NOT EXISTS idx_enviado_telegram ON anuncios(enviado_telegram)"),
+                    ("anuncios", "idx_data_publicacao", "CREATE INDEX IF NOT EXISTS idx_data_publicacao ON anuncios(data_publicacao)"),
+                    ("anuncios", "idx_ultima_visualizacao", "CREATE INDEX IF NOT EXISTS idx_ultima_visualizacao ON anuncios(ultima_visualizacao)"),
+                    ("credentials", "idx_credentials_service", "CREATE INDEX IF NOT EXISTS idx_credentials_service ON credentials(service)"),
+                    ("credentials", "idx_credentials_active", "CREATE INDEX IF NOT EXISTS idx_credentials_active ON credentials(is_active)"),
+                    ("palavras_chave", "idx_palavras_ativo", "CREATE INDEX IF NOT EXISTS idx_palavras_ativo ON palavras_chave(ativo)"),
+                    ("palavras_chave", "idx_palavras_origem", "CREATE INDEX IF NOT EXISTS idx_palavras_origem ON palavras_chave(origem)"),
+                    ("palavras_chave", "idx_palavras_prioridade", "CREATE INDEX IF NOT EXISTS idx_palavras_prioridade ON palavras_chave(prioridade DESC)"),
+                    ("execution_logs", "idx_logs_tipo", "CREATE INDEX IF NOT EXISTS idx_logs_tipo ON execution_logs(tipo)"),
+                    ("execution_logs", "idx_logs_status", "CREATE INDEX IF NOT EXISTS idx_logs_status ON execution_logs(status)"),
+                    ("execution_logs", "idx_logs_started_at", "CREATE INDEX IF NOT EXISTS idx_logs_started_at ON execution_logs(started_at DESC)"),
+                ]
+                
+                for table_name, index_name, index_sql in indices:
+                    # Verificar se a tabela existe antes de criar índice
+                    if table_exists(table_name):
+                        try:
+                            cursor.execute(index_sql)
+                        except Exception as idx_error:
+                            logger.debug(f"Índice {index_name} já existe ou erro ao criar: {idx_error}")
+                
+                conn.commit()
+            except Exception as idx_error:
+                logger.warning(f"Erro ao criar alguns índices: {idx_error}")
+            
             conn.close()
             
             if changes_made:
