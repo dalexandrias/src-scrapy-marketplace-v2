@@ -260,10 +260,10 @@ try:
         
         if not column_exists('palavras_chave', 'updated_at'):
             print('  ➕ Adicionando coluna updated_at à palavras_chave...')
-            cursor.execute('ALTER TABLE palavras_chave ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+            cursor.execute('ALTER TABLE palavras_chave ADD COLUMN updated_at TIMESTAMP')
             changes_made = True
     
-    # 4. Criar tabela scheduler_config se não existir
+    # 4. Criar/atualizar tabela scheduler_config
     if not table_exists('scheduler_config'):
         print('  ➕ Criando tabela scheduler_config...')
         cursor.execute('''
@@ -271,8 +271,10 @@ try:
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 enabled INTEGER DEFAULT 0,
                 interval_minutes INTEGER DEFAULT 30,
-                last_execution TIMESTAMP,
-                next_execution TIMESTAMP,
+                last_run TIMESTAMP,
+                next_run TIMESTAMP,
+                total_runs INTEGER DEFAULT 0,
+                total_errors INTEGER DEFAULT 0,
                 is_running INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -282,8 +284,39 @@ try:
             'INSERT OR IGNORE INTO scheduler_config (id, enabled, interval_minutes) VALUES (1, 0, 30)'
         )
         changes_made = True
+    else:
+        # Adicionar colunas que faltam na tabela scheduler_config
+        if not column_exists('scheduler_config', 'last_run'):
+            print('  ➕ Adicionando coluna last_run à scheduler_config...')
+            cursor.execute('ALTER TABLE scheduler_config ADD COLUMN last_run TIMESTAMP')
+            changes_made = True
+        
+        if not column_exists('scheduler_config', 'next_run'):
+            print('  ➕ Adicionando coluna next_run à scheduler_config...')
+            cursor.execute('ALTER TABLE scheduler_config ADD COLUMN next_run TIMESTAMP')
+            changes_made = True
+        
+        if not column_exists('scheduler_config', 'total_runs'):
+            print('  ➕ Adicionando coluna total_runs à scheduler_config...')
+            cursor.execute('ALTER TABLE scheduler_config ADD COLUMN total_runs INTEGER DEFAULT 0')
+            changes_made = True
+        
+        if not column_exists('scheduler_config', 'total_errors'):
+            print('  ➕ Adicionando coluna total_errors à scheduler_config...')
+            cursor.execute('ALTER TABLE scheduler_config ADD COLUMN total_errors INTEGER DEFAULT 0')
+            changes_made = True
+        
+        if not column_exists('scheduler_config', 'created_at'):
+            print('  ➕ Adicionando coluna created_at à scheduler_config...')
+            cursor.execute('ALTER TABLE scheduler_config ADD COLUMN created_at TIMESTAMP')
+            changes_made = True
+        
+        if not column_exists('scheduler_config', 'updated_at'):
+            print('  ➕ Adicionando coluna updated_at à scheduler_config...')
+            cursor.execute('ALTER TABLE scheduler_config ADD COLUMN updated_at TIMESTAMP')
+            changes_made = True
     
-    # 5. Criar tabela execution_logs se não existir
+    # 5. Criar/atualizar tabela execution_logs
     if not table_exists('execution_logs'):
         print('  ➕ Criando tabela execution_logs...')
         cursor.execute('''
@@ -301,6 +334,57 @@ try:
             )
         ''')
         changes_made = True
+    else:
+        # Renomear execution_type para tipo se existir
+        if column_exists('execution_logs', 'execution_type') and not column_exists('execution_logs', 'tipo'):
+            print('  ➕ Renomeando coluna execution_type para tipo...')
+            # SQLite não suporta RENAME COLUMN facilmente, então vamos criar nova coluna
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN tipo TEXT')
+            cursor.execute('UPDATE execution_logs SET tipo = execution_type')
+            changes_made = True
+        
+        # Adicionar coluna tipo se não existir
+        if not column_exists('execution_logs', 'tipo'):
+            print('  ➕ Adicionando coluna tipo à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN tipo TEXT')
+            changes_made = True
+        
+        # Adicionar coluna palavra_chave se não existir
+        if not column_exists('execution_logs', 'palavra_chave'):
+            print('  ➕ Adicionando coluna palavra_chave à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN palavra_chave TEXT')
+            changes_made = True
+        
+        # Adicionar outras colunas que possam estar faltando
+        if not column_exists('execution_logs', 'total_encontrados'):
+            print('  ➕ Adicionando coluna total_encontrados à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN total_encontrados INTEGER DEFAULT 0')
+            changes_made = True
+        
+        if not column_exists('execution_logs', 'total_novos'):
+            print('  ➕ Adicionando coluna total_novos à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN total_novos INTEGER DEFAULT 0')
+            changes_made = True
+        
+        if not column_exists('execution_logs', 'mensagem'):
+            print('  ➕ Adicionando coluna mensagem à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN mensagem TEXT')
+            changes_made = True
+        
+        if not column_exists('execution_logs', 'duracao_segundos'):
+            print('  ➕ Adicionando coluna duracao_segundos à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN duracao_segundos REAL')
+            changes_made = True
+        
+        if not column_exists('execution_logs', 'started_at'):
+            print('  ➕ Adicionando coluna started_at à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN started_at TIMESTAMP')
+            changes_made = True
+        
+        if not column_exists('execution_logs', 'finished_at'):
+            print('  ➕ Adicionando coluna finished_at à execution_logs...')
+            cursor.execute('ALTER TABLE execution_logs ADD COLUMN finished_at TIMESTAMP')
+            changes_made = True
     
     # COMMIT de todas as tabelas/colunas antes de criar índices
     conn.commit()
