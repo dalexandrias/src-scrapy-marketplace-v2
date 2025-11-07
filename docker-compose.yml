@@ -1,10 +1,10 @@
 services:
   scraper-marketplace:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-    image: dalexandrias/src-scrapy-marketplace-v1:latest
+    # image: dalexandrias/src-scrapy-marketplace-v1:latest
     
     container_name: scraper-marketplace
     

@@ -60,13 +60,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /root/.cache \
     && rm -rf /var/cache/apt/archives/*
 
+# Copiar e configurar entrypoint ANTES de copiar o resto (para não ser sobrescrito)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && mkdir -p /app/logs /app/data /app/backups
+
 # Copiar código da aplicação (última camada para melhor cache)
 COPY . .
-
-# Copiar e configurar entrypoint
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && mkdir -p /app/logs /app/data /app/backups
 
 # Health check
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
