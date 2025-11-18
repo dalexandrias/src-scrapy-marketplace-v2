@@ -210,9 +210,24 @@ class SchedulerManager:
                 else:
                     resultado['erro'] = "Não foi possível parsear resultados"
                     logger.warning(f"⚠️ [{palavra}] {resultado['erro']}")
+                    logger.debug(f"STDOUT: {result.stdout[:500]}")
             else:
-                resultado['erro'] = result.stderr[:200]
+                # Capturar tanto stderr quanto stdout para diagnóstico
+                stderr_msg = result.stderr.strip() if result.stderr else ""
+                stdout_msg = result.stdout.strip() if result.stdout else ""
+                
+                if stderr_msg:
+                    resultado['erro'] = stderr_msg[:500]
+                elif stdout_msg:
+                    resultado['erro'] = f"Sem stderr. STDOUT: {stdout_msg[:500]}"
+                else:
+                    resultado['erro'] = f"Processo falhou (returncode={result.returncode}) sem output"
+                
                 logger.error(f"❌ [{palavra}] Erro OLX: {resultado['erro']}")
+                if stderr_msg and len(stderr_msg) > 500:
+                    logger.debug(f"STDERR completo: {stderr_msg}")
+                if stdout_msg and len(stdout_msg) > 500:
+                    logger.debug(f"STDOUT completo: {stdout_msg}")
                 
         except subprocess.TimeoutExpired:
             resultado['erro'] = "Timeout (5 minutos)"
