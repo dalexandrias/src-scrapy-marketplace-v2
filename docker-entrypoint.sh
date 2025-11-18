@@ -197,7 +197,7 @@ try:
             cursor.execute('ALTER TABLE anuncios ADD COLUMN ultima_visualizacao TIMESTAMP')
             changes_made = True
     
-    # 2. Criar tabela credentials se não existir
+    # 2. Criar/atualizar tabela credentials
     if not table_exists('credentials'):
         print('  ➕ Criando tabela credentials...')
         cursor.execute('''
@@ -206,6 +206,7 @@ try:
                 service TEXT NOT NULL,
                 identifier TEXT NOT NULL,
                 credential TEXT NOT NULL,
+                encrypted_password TEXT,
                 is_active INTEGER DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -213,6 +214,12 @@ try:
             )
         ''')
         changes_made = True
+    else:
+        # Adicionar coluna encrypted_password se não existir
+        if not column_exists('credentials', 'encrypted_password'):
+            print('  ➕ Adicionando coluna encrypted_password à credentials...')
+            cursor.execute('ALTER TABLE credentials ADD COLUMN encrypted_password TEXT')
+            changes_made = True
     
     # 3. Criar/atualizar tabela palavras_chave
     if not table_exists('palavras_chave'):
