@@ -53,15 +53,19 @@ class SchedulerManager:
         self.project_root = Path(__file__).parent.parent.parent
         self.max_workers = Config.scheduler.get_max_workers()
         
-        # Criar executor persistente para o scheduler
-        self._executor = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="scheduler")
+        # Criar executor para buscas manuais paralelas (separado do APScheduler)
+        self._manual_executor = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="manual_search")
         
-        # Inicializar scheduler com executor customizado
-        from apscheduler.executors.pool import ThreadPoolExecutor as APSchedulerThreadPoolExecutor
-        executors = {
-            'default': APSchedulerThreadPoolExecutor(max_workers=self.max_workers)
-        }
-        self.scheduler = BackgroundScheduler(timezone='America/Sao_Paulo', executors=executors)
+        # Inicializar scheduler SEM executor customizado - deixar APScheduler gerenciar
+        # Isso evita problemas com shutdown do ThreadPoolExecutor
+        self.scheduler = BackgroundScheduler(
+            timezone='America/Sao_Paulo',
+            job_defaults={
+                'coalesce': True,  # Combinar múltiplas execuções perdidas em uma só
+                'max_instances': 1,  # Apenas uma instância de cada job por vez
+                'misfire_grace_time': 60  # Tolerar até 60s de atraso
+            }
+        )
         
         logger.info(f"SchedulerManager inicializado com {self.max_workers} workers")
         
@@ -313,7 +317,7 @@ class SchedulerManager:
             all_urls = []  # Coletar todas as URLs encontradas
             
             # Submeter todas as tarefas
-            futures = {self._executor.submit(self._execute_olx_scraper, palavra): palavra 
+            futures = {self._manual_executor.submit(self._execute_olx_scraper, palavra): palavra 
                       for palavra in keywords}
             
             # Processar resultados conforme completam
@@ -412,7 +416,7 @@ class SchedulerManager:
             all_urls = []  # Coletar todas as URLs encontradas
             
             # Submeter todas as tarefas
-            futures = {self._executor.submit(self._execute_facebook_scraper, palavra, fb_credentials): palavra 
+            futures = {self._manual_executor.submit(self._execute_facebook_scraper, palavra, fb_credentials): palavra 
                       for palavra in keywords}
             
             # Processar resultados conforme completam
@@ -694,20 +698,20 @@ class SchedulerManager:
     def shutdown(self):
         """Libera recursos ao encerrar o scheduler"""
         try:
-            if self.scheduler.running:
-                self.scheduler.shutdown(wait=False)
+            # Parar scheduler primeiro
+            if hasattr(self, 'scheduler') and self.scheduler.running:
+                self.scheduler.shutdown(wait=True)  # Aguardar jobs finalizarem
+                logger.info("Scheduler encerrado")
             
-            if hasattr(self, '_executor'):
-                self._executor.shutdown(wait=False)
+            # Fechar executor de buscas manuais
+            if hasattr(self, '_manual_executor'):
+                self._manual_executor.shutdown(wait=False)
+                logger.info("Executor manual encerrado")
                 
             logger.info("Recursos do scheduler liberados")
             
         except Exception as e:
             logger.error(f"Erro ao liberar recursos: {e}", exc_info=True)
-    
-    def __del__(self):
-        """Destructor para garantir limpeza de recursos"""
-        self.shutdown()
     
     def run_manual_search(self, tipo: str = 'ambos') -> bool:
         """
