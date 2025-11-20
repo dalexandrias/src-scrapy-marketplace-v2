@@ -187,6 +187,9 @@ class SchedulerManager:
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
             
+            # Timeout configurável via env (padrão 600s = 10min para produção Coolify)
+            timeout_seconds = int(os.getenv('SCRAPER_TIMEOUT', '600'))
+            
             result = subprocess.run(
                 [python_exe, str(script_path), palavra],
                 capture_output=True,
@@ -194,7 +197,7 @@ class SchedulerManager:
                 encoding='utf-8',
                 errors='replace',
                 env=env,
-                timeout=300
+                timeout=timeout_seconds
             )
             
             if result.returncode == 0:
@@ -230,8 +233,9 @@ class SchedulerManager:
                     logger.debug(f"STDOUT completo: {stdout_msg}")
                 
         except subprocess.TimeoutExpired:
-            resultado['erro'] = "Timeout (5 minutos)"
-            logger.error(f"❌ [{palavra}] Timeout na busca OLX")
+            timeout_min = int(os.getenv('SCRAPER_TIMEOUT', '600')) / 60
+            resultado['erro'] = f"Timeout ({timeout_min:.0f} minutos)"
+            logger.error(f"❌ [{palavra}] Timeout na busca OLX ({timeout_min:.0f} min)")
         except Exception as e:
             resultado['erro'] = str(e)[:200]
             logger.error(f"❌ [{palavra}] Erro: {e}")
@@ -273,6 +277,9 @@ class SchedulerManager:
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
             
+            # Timeout configurável via env (padrão 600s = 10min para produção Coolify)
+            timeout_seconds = int(os.getenv('SCRAPER_TIMEOUT', '600'))
+            
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -280,7 +287,7 @@ class SchedulerManager:
                 encoding='utf-8',
                 errors='replace',
                 env=env,
-                timeout=300
+                timeout=timeout_seconds
             )
             
             if result.returncode == 0:
@@ -301,8 +308,9 @@ class SchedulerManager:
                 logger.error(f"❌ [{palavra}] Erro Facebook: {resultado['erro']}")
                 
         except subprocess.TimeoutExpired:
-            resultado['erro'] = "Timeout (5 minutos)"
-            logger.error(f"❌ [{palavra}] Timeout na busca Facebook")
+            timeout_min = int(os.getenv('SCRAPER_TIMEOUT', '600')) / 60
+            resultado['erro'] = f"Timeout ({timeout_min:.0f} minutos)"
+            logger.error(f"❌ [{palavra}] Timeout na busca Facebook ({timeout_min:.0f} min)")
         except Exception as e:
             resultado['erro'] = str(e)[:200]
             logger.error(f"❌ [{palavra}] Erro: {e}")

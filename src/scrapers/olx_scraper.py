@@ -59,9 +59,20 @@ def buscar_anuncios_olx_playwright(palavra_chave: str, estado: str = 'pr'):
     anuncios = []
     
     with sync_playwright() as p:
-        # Lançar navegador
+        # Lançar navegador com otimizações para produção
         logger.info("Abrindo navegador Chromium...")
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                '--disable-dev-shm-usage',  # Evita problemas de memória compartilhada
+                '--disable-gpu',             # Desabilita GPU (não precisa em headless)
+                '--no-sandbox',              # Necessário em containers Docker
+                '--disable-setuid-sandbox',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process',
+                '--disable-blink-features=AutomationControlled',
+            ]
+        )
         
         context = browser.new_context(
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

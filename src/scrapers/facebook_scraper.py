@@ -51,10 +51,13 @@ def buscar_facebook_marketplace(palavra_chave, email=None, senha=None, cidade='c
         browser = p.chromium.launch(
             headless=True,
             args=[
+                '--disable-dev-shm-usage',  # Evita problemas de memória compartilhada
+                '--disable-gpu',             # Desabilita GPU (não precisa em headless)
+                '--no-sandbox',              # Necessário em containers Docker
+                '--disable-setuid-sandbox',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process',
                 '--disable-blink-features=AutomationControlled',
-                '--disable-dev-shm-usage',
-                '--no-sandbox',
-                '--disable-gpu'
             ]
         )
         
